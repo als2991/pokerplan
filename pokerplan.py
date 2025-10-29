@@ -143,6 +143,75 @@ async def set_session_status(session_id: str, status: str):
         await db.execute("UPDATE sessions SET status = ? WHERE id = ?", (status, session_id))
         await db.commit()
 
+# --- Results helper ---
+async def compose_and_broadcast_results(session_id: str) -> Optional[str]:
+    session = await get_session(session_id)
+    if not session:
+        return None
+    votes = await get_votes(session_id)
+    members = await get_members(session_id)
+    if not votes:
+        return None
+
+    counts: Dict[str, int] = {}
+    numeric_values = []
+    for v in votes:
+        val = v["value"]
+        counts[val] = counts.get(val, 0) + 1
+        try:
+            if val == "?":
+                continue
+            elif val == "½":
+                numeric_values.append(0.5)
+            else:
+                numeric_values.append(float(val))
+        except Exception:
+            pass
+
+    lines = [f"📊 *Результаты голосования для* _{session['title']}_ (`{session_id}`):"]
+    total = len(votes)
+    for opt in VOTE_OPTIONS:
+        if opt in counts:
+            lines.append(f"{opt} — {counts[opt]}")
+
+    stats_lines = []
+    if numeric_values:
+        try:
+            mean = statistics.mean(numeric_values)
+            median = statistics.median(numeric_values)
+            stats_lines.append(f"\n⚖️ Среднее: {mean:.2f}")
+            stats_lines.append(f"🔹 Медиана: {median}")
+        except Exception:
+            pass
+
+    lines.append(f"\nВсего голосов: {total}")
+    if stats_lines:
+        lines.extend(stats_lines)
+
+    # кто не голосовал (для ведущего полезно видеть)
+    voted_ids = {v["user_id"] for v in votes}
+    not_voted = [m for m in members if m["user_id"] not in voted_ids]
+    if not_voted:
+        lines.append("\n❗Не голосовали:")
+        for m in not_voted:
+            display = m["username"] or m["first_name"] or str(m["user_id"])
+            lines.append(f"- {display}")
+
+    result_text = "\n".join(lines)
+
+    # Рассылаем результаты всем участникам
+    for m in members:
+        try:
+            await bot.send_message(
+                m["user_id"],
+                result_text,
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logger.warning(f"Не удалось отправить сообщение пользователю {m['user_id']}: {e}")
+
+    return result_text
+
 # --- UI helpers ---
 def build_vote_keyboard(session_id: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
@@ -288,6 +357,23 @@ async def cb_vote(callback: types.CallbackQuery):
             reply_markup=None  # убираем клавиатуру
         )
 
+    # Автоматическое раскрытие результатов: если все участники проголосовали
+    try:
+        if session["status"] == "open":
+            members = await get_members(sid)
+            votes = await get_votes(sid)
+            unique_voters = {v["user_id"] for v in votes}
+            if members and len(unique_voters) == len(members):
+                result_text = await compose_and_broadcast_results(sid)
+                if result_text:
+                    # Уведомим ведущего отдельно, чтобы было понятно, что всё произошло автоматически
+                    try:
+                        await bot.send_message(session["creator_id"], "✅ Все участники проголосовали. Результаты разосланы всем участникам.")
+                    except Exception:
+                        pass
+    except Exception as e:
+        logger.warning(f"Auto-reveal error for session {sid}: {e}")
+
 @dp.callback_query(lambda c: c.data and c.data.startswith("reveal|"))
 async def cb_reveal(callback: types.CallbackQuery):
     await callback.answer()
@@ -301,74 +387,10 @@ async def cb_reveal(callback: types.CallbackQuery):
     if callback.from_user.id != session["creator_id"]:
         await callback.answer("Только ведущий (создатель сессии) может показать результаты.", show_alert=True)
         return
-
-    votes = await get_votes(sid)
-    members = await get_members(sid)
-
-    if not votes:
+    result_text = await compose_and_broadcast_results(sid)
+    if not result_text:
         await callback.message.reply("Голосов ещё нет.")
         return
-
-    # Подсчёт голосов
-    counts: Dict[str, int] = {}
-    numeric_values = []
-
-    for v in votes:
-        val = v["value"]
-        counts[val] = counts.get(val, 0) + 1
-        try:
-            if val == "?":
-                continue
-            elif val == "½":
-                numeric_values.append(0.5)
-            else:
-                numeric_values.append(float(val))
-        except Exception:
-            pass
-
-    # Формируем текст итогов
-    lines = [f"📊 *Результаты голосования для* _{session['title']}_ (`{sid}`):"]
-    total = len(votes)
-    for opt in VOTE_OPTIONS:
-        if opt in counts:
-            lines.append(f"{opt} — {counts[opt]}")
-
-    stats_lines = []
-    if numeric_values:
-        try:
-            mean = statistics.mean(numeric_values)
-            median = statistics.median(numeric_values)
-            stats_lines.append(f"\n⚖️ Среднее: {mean:.2f}")
-            stats_lines.append(f"🔹 Медиана: {median}")
-        except Exception:
-            pass
-
-    lines.append(f"\nВсего голосов: {total}")
-    if stats_lines:
-        lines.extend(stats_lines)
-
-    # Кто не голосовал
-    voted_ids = {v["user_id"] for v in votes}
-    not_voted = [m for m in members if m["user_id"] not in voted_ids]
-    if not_voted:
-        lines.append("\n❗Не голосовали:")
-        for m in not_voted:
-            display = m["username"] or m["first_name"] or str(m["user_id"])
-            lines.append(f"- {display}")
-
-    result_text = "\n".join(lines)
-
-    # Рассылаем результаты всем участникам
-    for m in members:
-        try:
-            await bot.send_message(
-                m["user_id"],
-                result_text,
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            logger.warning(f"Не удалось отправить сообщение пользователю {m['user_id']}: {e}")
-
     await callback.message.reply("✅ Результаты разосланы всем участникам.", parse_mode="Markdown")
 
 @dp.callback_query(lambda c: c.data and c.data.startswith("revote|"))
@@ -413,8 +435,11 @@ async def cb_members(callback: types.CallbackQuery):
         return
     lines = [f"👥 Участники для _{session['title']}_ (`{sid}`):"]
     for m in members:
-        display = (f"@{m['username']}" if m["username"] else (m["first_name"] or str(m["user_id"])))
-        lines.append(f"- {display}")
+        # username / first_name / user_id (if missing)
+        username = f"@{m['username']}" if m['username'] else "—"
+        first_name = m["first_name"] or "—"
+        user_id = str(m["user_id"])
+        lines.append(f"- {username} / {first_name} / {user_id}")
     await callback.message.reply("\n".join(lines), parse_mode="Markdown")
 
 @dp.callback_query(lambda c: c.data and c.data.startswith("info|"))
