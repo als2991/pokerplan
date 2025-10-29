@@ -162,6 +162,9 @@ def build_vote_keyboard(session_id: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="Показать результаты (только ведущий)", callback_data=f"reveal|{session_id}"),
         InlineKeyboardButton(text="Переголосовать (сброс голосов, только ведущий)", callback_data=f"revote|{session_id}")
     )
+    kb.row(
+        InlineKeyboardButton(text="Участники", callback_data=f"members|{session_id}")
+    )
     return kb.as_markup()
 
 def build_session_buttons(session_id: str) -> InlineKeyboardMarkup:
@@ -388,6 +391,31 @@ async def cb_revote(callback: types.CallbackQuery):
         except Exception:
             pass
     await callback.message.reply("Голоса сброшены и отправлены запросы на переголосование участникам (если бот мог им писать).")
+
+@dp.callback_query(lambda c: c.data and c.data.startswith("members|"))
+async def cb_members(callback: types.CallbackQuery):
+    await callback.answer()
+    _, sid = callback.data.split("|", 1)
+    session = await get_session(sid)
+    if not session:
+        await callback.answer("Сессия не найдена", show_alert=True)
+        return
+    if session["status"] != "open":
+        await callback.answer("Сессия не активна.", show_alert=True)
+        return
+    # Только создатель может видеть список участников
+    if callback.from_user.id != session["creator_id"]:
+        await callback.answer("Только ведущий (создатель сессии) может смотреть участников.", show_alert=True)
+        return
+    members = await get_members(sid)
+    if not members:
+        await callback.message.reply("Пока никто не присоединился.")
+        return
+    lines = [f"👥 Участники для _{session['title']}_ (`{sid}`):"]
+    for m in members:
+        display = (f"@{m['username']}" if m["username"] else (m["first_name"] or str(m["user_id"])))
+        lines.append(f"- {display}")
+    await callback.message.reply("\n".join(lines), parse_mode="Markdown")
 
 @dp.callback_query(lambda c: c.data and c.data.startswith("info|"))
 async def cb_info(callback: types.CallbackQuery):
