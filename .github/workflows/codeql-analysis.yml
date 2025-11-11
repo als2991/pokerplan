@@ -29,3 +29,6 @@ jobs:
 
     - name: Run CodeQL analysis
       uses: github/codeql-action/analyze@v3
+
+permissions:
+  security-events: write
