@@ -33,6 +33,7 @@ jobs:
           extra-packs: codeql/python-queries@latest
           queries: >
             codeql/python-queries:security-and-quality.qls
+            codeql/python-queries:experimental
 
 
 permissions:
