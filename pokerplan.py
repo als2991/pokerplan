@@ -7,6 +7,7 @@ Planning Poker Telegram Bot
 - uses aiosqlite for persistence (local file: poker.db)
 - anonymous voting: votes stored but not shown per-user
 - admin (creator) can see who hasn't voted (usernames/names), but not their choices
+
 """
 
 import asyncio
