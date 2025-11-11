@@ -1,0 +1,46 @@
+---
+sourceLocationPrefix: C:\Work KS\PokerPlan
+baselineLinesOfCode: 436
+unicodeNewlines: false
+columnKind: utf32
+primaryLanguage: python
+inProgress:
+  primaryLanguage: python
+  installedExtractors:
+    actions:
+     - C:/SOFT/codeql/actions
+    cpp:
+     - C:/SOFT/codeql/cpp
+    csharp:
+     - C:/SOFT/codeql/csharp
+    csv:
+     - C:/SOFT/codeql/csv
+    go:
+     - C:/SOFT/codeql/go
+    html:
+     - C:/SOFT/codeql/html
+    java:
+     - C:/SOFT/codeql/java
+    javascript:
+     - C:/SOFT/codeql/javascript
+    properties:
+     - C:/SOFT/codeql/properties
+    python:
+     - C:/SOFT/codeql/python
+    ruby:
+     - C:/SOFT/codeql/ruby
+    rust:
+     - C:/SOFT/codeql/rust
+    swift:
+     - C:/SOFT/codeql/swift
+    xml:
+     - C:/SOFT/codeql/xml
+    yaml:
+     - C:/SOFT/codeql/yaml
+creationMetadata:
+  sha: 58d61e58ad7fff11c7e65b708e6ff8cb3e06c728
+  cliVersion: 2.23.3
+  creationTime: 2025-11-11T05:43:46.975348600Z
+overlayBaseDatabase: false
+overlayDatabase: false
+finalised: false
