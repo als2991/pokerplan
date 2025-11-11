@@ -8,12 +8,7 @@ on:
 
 jobs:
   analyze:
--   name: Run CodeQL analysis
-    uses: github/codeql-action/analyze@v3
-    with:
-    extra-packs: codeql/python-queries@latest
-    queries: >
-      codeql/python-queries:security-and-quality.qls
+    name: Analyze code with CodeQL
     runs-on: ubuntu-latest
 
     strategy:
@@ -21,19 +16,24 @@ jobs:
         language: [ 'python' ]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
 
-    - name: Run CodeQL analysis
-      uses: github/codeql-action/analyze@v3
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          extra-packs: codeql/python-queries@latest
+          queries: >
+            codeql/python-queries:security-and-quality.qls
+
 
 permissions:
   security-events: write
