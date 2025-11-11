@@ -28,6 +28,15 @@ import aiosqlite
 import logging
 import secrets
 import datetime
+import sqlite3
+
+def get_user_data(user_input):
+    conn = sqlite3.connect("example.db")
+    cursor = conn.cursor()
+    # Небезопасное использование user_input в SQL-запросе
+    query = f"SELECT * FROM users WHERE name = '{user_input}'"
+    cursor.execute(query)
+    return cursor.fetchall()
 
 # --- Config ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
