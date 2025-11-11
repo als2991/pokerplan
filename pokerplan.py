@@ -28,6 +28,7 @@ import aiosqlite
 import logging
 import secrets
 import datetime
+
 import sqlite3
 import pickle
 
@@ -46,6 +47,21 @@ def load_data(data):
 def execute_user_code(code):
     # Опасный вызов eval
     return eval(code)
+    
+    
+# 1) явный taint из input -> eval
+user = input("enter something: ")
+eval(user)
+
+# 2) SQL injection: передаём input прямо в execute
+user2 = input("name: ")
+conn = sqlite3.connect(':memory:')
+c = conn.cursor()
+c.execute("SELECT * FROM users WHERE name = '" + user2 + "'")
+
+# 3) небезопасная десериализация из input
+data = input("pickle: ")
+pickle.loads(data)
     
     
 
