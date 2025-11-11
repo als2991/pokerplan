@@ -1,5 +1,5 @@
 sqlite3
 tzdata
+python-dotenv==1.0.1
 aiogram==3.13.1
 aiosqlite==0.20.0
-python-dotenv==1.0.1
