@@ -29,6 +29,7 @@ import logging
 import secrets
 import datetime
 import sqlite3
+import pickle
 
 def get_user_data(user_input):
     conn = sqlite3.connect("example.db")
@@ -37,6 +38,16 @@ def get_user_data(user_input):
     query = f"SELECT * FROM users WHERE name = '{user_input}'"
     cursor.execute(query)
     return cursor.fetchall()
+    
+def load_data(data):
+    # Небезопасная загрузка pickle
+    return pickle.loads(data)
+    
+def execute_user_code(code):
+    # Опасный вызов eval
+    return eval(code)
+    
+    
 
 # --- Config ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
