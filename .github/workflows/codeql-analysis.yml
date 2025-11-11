@@ -8,7 +8,12 @@ on:
 
 jobs:
   analyze:
-    name: Analyze code with CodeQL
+-   name: Run CodeQL analysis
+    uses: github/codeql-action/analyze@v3
+    with:
+    extra-packs: codeql/python-queries@latest
+    queries: >
+      codeql/python-queries:security-and-quality.qls
     runs-on: ubuntu-latest
 
     strategy:
